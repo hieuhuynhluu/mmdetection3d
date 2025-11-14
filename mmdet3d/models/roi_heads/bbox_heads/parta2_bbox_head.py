@@ -385,12 +385,12 @@ class PartA2BboxHead(BaseModule):
         Returns:
             tuple[torch.Tensor]: Targets of boxes and class prediction.
         """
-        pos_bboxes_list = [res.pos_bboxes for res in sampling_results]
+        pos_priors_list = [res.pos_priors for res in sampling_results]
         pos_gt_bboxes_list = [res.pos_gt_bboxes for res in sampling_results]
         iou_list = [res.iou for res in sampling_results]
         targets = multi_apply(
             self._get_target_single,
-            pos_bboxes_list,
+            pos_priors_list,
             pos_gt_bboxes_list,
             iou_list,
             cfg=rcnn_train_cfg)
@@ -413,16 +413,16 @@ class PartA2BboxHead(BaseModule):
         return (label, bbox_targets, pos_gt_bboxes, reg_mask, label_weights,
                 bbox_weights)
 
-    def _get_target_single(self, pos_bboxes: Tensor, pos_gt_bboxes: Tensor,
+    def _get_target_single(self, pos_priors: Tensor, pos_gt_bboxes: Tensor,
                            ious: Tensor, cfg: dict) -> Tuple[Tensor]:
         """Generate training targets for a single sample.
 
         Args:
-            pos_bboxes (torch.Tensor): Positive boxes with shape
+            pos_priors (torch.Tensor): Positive boxes with shape
                 (N, 7).
             pos_gt_bboxes (torch.Tensor): Ground truth boxes with shape
                 (M, 7).
-            ious (torch.Tensor): IoU between `pos_bboxes` and `pos_gt_bboxes`
+            ious (torch.Tensor): IoU between `pos_priors` and `pos_gt_bboxes`
                 in shape (N, M).
             cfg (dict): Training configs.
 
@@ -442,13 +442,13 @@ class PartA2BboxHead(BaseModule):
         label_weights = (label >= 0).float()
 
         # box regression target
-        reg_mask = pos_bboxes.new_zeros(ious.size(0)).long()
+        reg_mask = pos_priors.new_zeros(ious.size(0)).long()
         reg_mask[0:pos_gt_bboxes.size(0)] = 1
         bbox_weights = (reg_mask > 0).float()
         if reg_mask.bool().any():
             pos_gt_bboxes_ct = pos_gt_bboxes.clone().detach()
-            roi_center = pos_bboxes[..., 0:3]
-            roi_ry = pos_bboxes[..., 6] % (2 * np.pi)
+            roi_center = pos_priors[..., 0:3]
+            roi_ry = pos_priors[..., 6] % (2 * np.pi)
 
             # canonical transformation
             pos_gt_bboxes_ct[..., 0:3] -= roi_center
@@ -467,7 +467,7 @@ class PartA2BboxHead(BaseModule):
             ry_label = torch.clamp(ry_label, min=-np.pi / 2, max=np.pi / 2)
             pos_gt_bboxes_ct[..., 6] = ry_label
 
-            rois_anchor = pos_bboxes.clone().detach()
+            rois_anchor = pos_priors.clone().detach()
             rois_anchor[:, 0:3] = 0
             rois_anchor[:, 6] = 0
             bbox_targets = self.bbox_coder.encode(rois_anchor,

@@ -292,9 +292,9 @@ class AnchorTrainMixin(object):
             labels += num_classes
         if len(pos_inds) > 0:
             pos_bbox_targets = self.bbox_coder.encode(
-                sampling_result.pos_bboxes, sampling_result.pos_gt_bboxes)
+                sampling_result.pos_priors, sampling_result.pos_gt_bboxes)
             pos_dir_targets = get_direction_target(
-                sampling_result.pos_bboxes,
+                sampling_result.pos_priors,
                 pos_bbox_targets,
                 self.dir_offset,
                 self.dir_limit_offset,

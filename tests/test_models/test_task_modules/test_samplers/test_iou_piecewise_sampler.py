@@ -47,5 +47,5 @@ def test_iou_piecewise_sampler():
     sample_result = sampler.sample(assign_result, bboxes, gt_bboxes, gt_labels)
 
     assert sample_result.pos_inds == 4
-    assert len(sample_result.pos_bboxes) == len(sample_result.pos_inds)
+    assert len(sample_result.pos_priors) == len(sample_result.pos_inds)
     assert len(sample_result.neg_bboxes) == len(sample_result.neg_inds)
